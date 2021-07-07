@@ -1,7 +1,7 @@
 # vCSR
-## Virtualized CSR generator
+## Virtualized CSR Generator
 ---
-This project supports codes for manipulating a vCSR format of graph data \(including CSR format also\).
+This project supports codes for manipulating a vCSR format of graph data \(CSR format is also available\).
 
 ---
 Tested operating system
@@ -26,9 +26,11 @@ make
 ---
 Execute
 -----
-./vcsr \<\*_mtx\> \[option1\] \[option2\]
-    - \[option1\] --virtual \<max\_degree\> : set maximum degree of a vertex
-    - \[option2\] --undirected : add reverse edges
+./vcsr --input \<\*_mtx\> \[option1\] \[option2\]
+- \[option1\] --virtual \<max\_degree\> 
+    - set maximum degree of a vertex to \<max\_degree\>
+- \[option2\] --undirected
+    - add reverse edges
 
 ---
 Code specification
