@@ -27,9 +27,9 @@ make
 Execute
 -----
 ./vcsr --input \<\*_mtx\> \[option1\] \[option2\]
-- \[option1\] --virtual \<max\_degree\> 
+- \[option1\]: --virtual \<max\_degree\> 
     - set maximum degree of a vertex to \<max\_degree\>
-- \[option2\] --undirected
+- \[option2\]: --undirected
     - add reverse edges
 
 ---
