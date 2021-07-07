@@ -41,6 +41,13 @@ int main(int argc, char **argv){
     bool fin_vid_list = false;
     bool fin_virt_beg_pos = false;
 
+    data_t disk_beg_pos;
+    data_t disk_adj_list;
+    data_t disk_vid_pos;
+    data_t disk_vid_list;
+    data_t disk_virt_beg_pos;
+    data_t disk_acc = 0;
+
     double t_st, t_elpd_st;
 
     t_elpd_st = wtime();
@@ -313,6 +320,8 @@ int main(int argc, char **argv){
         fclose(file_beg_pos);
         free(beg_pos);
         std::cout << "[Done] " << "(elapsed (s): " << wtime() - t_st << ")" << std::endl;
+        disk_beg_pos = (vert_count + 1) * sizeof(data_t);
+        disk_acc += disk_beg_pos;
         fin_beg_pos = true;
     }
 
@@ -323,6 +332,8 @@ int main(int argc, char **argv){
     fclose(file_adj_list);
     free(adj_list);
     std::cout << "[Done] " << "(elapsed (s): " << wtime() - t_st << ")" << std::endl;
+    disk_adj_list = edge_count * sizeof(data_t);
+    disk_acc += disk_adj_list;
     fin_adj_list = true;
 
     if(is_virtual){
@@ -392,6 +403,8 @@ int main(int argc, char **argv){
         fclose(file_vid_pos);
         free(vid_pos);
         std::cout << "[Done] " << "(elapsed (s): " << wtime() - t_st << ")" << std::endl;
+        disk_vid_pos = (vert_count + 1) * sizeof(data_t);
+        disk_acc += disk_vid_pos;
         fin_vid_pos = true;
 
         t_st = wtime();
@@ -401,6 +414,8 @@ int main(int argc, char **argv){
         fclose(file_vid_list);
         free(vid_list);
         std::cout << "[Done] " << "(elapsed (s): " << wtime() - t_st << ")" << std::endl;
+        disk_vid_list = virt_vert_count * sizeof(data_t);
+        disk_acc += disk_vid_list;
         fin_vid_list = true;
 
         t_st = wtime();
@@ -410,23 +425,31 @@ int main(int argc, char **argv){
         fclose(file_virt_beg_pos);
         free(virt_beg_pos);
         std::cout << "[Done] " << "(elapsed (s): " << wtime() - t_st << ")" << std::endl;
+        disk_virt_beg_pos = (virt_vert_count + 1) * sizeof(data_t);
+        disk_acc += disk_virt_beg_pos;
         fin_virt_beg_pos = true;
     }
 
     std::cout << "===============================================================" << std::endl;
     std::cout << "[Result] Successfully completed! " << std::endl;
+    if(is_virtual)
+        std::cout << "[Result] Number of vertices:  " << virt_vert_count << " (" << vert_count << " + " << cnt_spawned << ")" << std::endl;
+    else
+        std::cout << "[Result] Number of vertices:  " << vert_count << std::endl;
+    std::cout << "[Result] Number of edges:  " << edge_count << std::endl;
+    std::cout << "[Result] Occupied capacity (bytes):  " << disk_acc << std::endl;
     std::cout << "[Result] Consumed time (s):  " << wtime() - t_elpd_st << std::endl;
     std::cout << "===============================================================" << std::endl;
     if(fin_beg_pos)
-        std::cout << "[Created] " << filename << "_beg_pos.bin" << std::endl;
+        std::cout << "[Created] " << filename << "_beg_pos.bin" << " (" << disk_beg_pos << " bytes)" << std::endl;
     if(fin_adj_list)
-        std::cout << "[Created] " << filename << "_adj_list.bin" << std::endl;
+        std::cout << "[Created] " << filename << "_adj_list.bin" << " (" << disk_adj_list << " bytes)" << std::endl;
     if(fin_vid_pos)
-        std::cout << "[Created] " << filename << "_vid_pos.bin" << std::endl;
+        std::cout << "[Created] " << filename << "_vid_pos.bin" << " (" << disk_vid_pos << " bytes)" << std::endl;
     if(fin_vid_list)
-        std::cout << "[Created] " << filename << "_vid_list.bin" << std::endl;
+        std::cout << "[Created] " << filename << "_vid_list.bin" << " (" << disk_vid_list << " bytes)" << std::endl;
     if(fin_virt_beg_pos)
-        std::cout << "[Created] " << filename << "_virt_beg_pos.bin" << std::endl;
+        std::cout << "[Created] " << filename << "_virt_beg_pos.bin" << " (" << disk_virt_beg_pos << " bytes)" << std::endl;
     std::cout << "===============================================================" << std::endl;
 
     free(degree);
