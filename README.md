@@ -34,7 +34,7 @@ Execute
 - \[option3\]: --sorted
     - sort intra-neighbor lists
 - \[option4\]: --verylarge
-    - set data type of vertices and edges to 'long long', default='int'
+    - set data type of vertices and edges to 'unsigned long long', default='unsigned int'
 
 ---
 Code specification

@@ -15,7 +15,8 @@ void preprocess_graph(
         bool is_sorted,
         bool is_verylarge,
         double t_elpd_st,
-        int max_degree
+        int max_degree,
+        data_t INFTY
 ){
 
     std::ifstream file;
@@ -49,9 +50,9 @@ void preprocess_graph(
     data_t nodes_x, nodes_y, edges;
     int item_scanned;
     if(is_verylarge)
-        item_scanned = sscanf(line.c_str(), "%lld %lld %lld", &nodes_x, &nodes_y, &edges);
+        item_scanned = sscanf(line.c_str(), "%llu %llu %llu", &nodes_x, &nodes_y, &edges);
     else
-        item_scanned = sscanf(line.c_str(), "%d %d %d", &nodes_x, &nodes_y, &edges);
+        item_scanned = sscanf(line.c_str(), "%u %u %u", &nodes_x, &nodes_y, &edges);
     if(item_scanned < 3 || nodes_x <= 0 || nodes_y <= 0 || edges <= 0){
         std::cout << "[Invalid] Graph metadata is not valid." << std::endl;
         std::cout << "\nPlease make sure that the first line after all comments represents nodes_x, node_y, and edges." << std::endl;
@@ -68,20 +69,6 @@ void preprocess_graph(
     }
     std::cout << std::endl;
 
-    if(is_verylarge){
-        if(vert_count < INT_MAX && edge_count < INT_MAX)
-            std::cout << "[Notification] The graph size is not very large, so disabling --verylarge is appropriate." << std::endl;
-    }
-    else{
-        if(vert_count >= INT_MAX || edge_count >= INT_MAX){
-            std::cout << "[Invalid] The graph size is very large, so you must enable --verylarge." << std::endl;
-            file.close();
-            exit(-1);
-        }
-    }
-
-    data_t *degree = (data_t *) malloc(sizeof(data_t) * vert_count);
-
     data_t cursor = file.tellg();
 
     data_t v_cur, v_max, v_src, v_dest;
@@ -97,9 +84,9 @@ void preprocess_graph(
 
         std::getline(file, line);
         if(is_verylarge)
-            item_scanned = sscanf(line.c_str(), "%lld %lld", &v_src, &v_dest);
+            item_scanned = sscanf(line.c_str(), "%llu %llu", &v_src, &v_dest);
         else
-            item_scanned = sscanf(line.c_str(), "%d %d", &v_src, &v_dest);
+            item_scanned = sscanf(line.c_str(), "%u %u", &v_src, &v_dest);
 
         if(item_scanned < 2){
             std::cout << "[Invalid] An invalid edge that has neither v_src or v_dest was found." << std::endl;
@@ -111,12 +98,14 @@ void preprocess_graph(
             v_max = v_cur;
     }
     std::cout << "[Done] " << "(elapsed (s): " << wtime() - t_st << ")" << std::endl;
+
+    data_t *degree = (data_t *) malloc(sizeof(data_t) * vert_count);
     data_t *mapping = (data_t *) malloc(sizeof(data_t) * (v_max + 1));
 
     for(data_t i = 0; i < vert_count; i++)
         degree[i] = 0;
     for(data_t i = 0; i < v_max + 1; i++)
-        mapping[i] = -1;
+        mapping[i] = INFTY;
 
     file.seekg(cursor);
     data_t cnt_mapping = 0;
@@ -127,11 +116,11 @@ void preprocess_graph(
 
         std::getline(file, line);
         if(is_verylarge)
-            sscanf(line.c_str(), "%lld %lld", &v_src, &v_dest);
+            sscanf(line.c_str(), "%llu %llu", &v_src, &v_dest);
         else
-            sscanf(line.c_str(), "%d %d", &v_src, &v_dest);
+            sscanf(line.c_str(), "%u %u", &v_src, &v_dest);
 
-        if(mapping[v_src] == -1){
+        if(mapping[v_src] == INFTY){
 
             mapping[v_src] = cnt_mapping;
             cnt_mapping++;
@@ -140,7 +129,7 @@ void preprocess_graph(
 
         if(is_undirected){
 
-            if(mapping[v_dest] == -1){
+            if(mapping[v_dest] == INFTY){
 
                 mapping[v_dest] = cnt_mapping;
                 cnt_mapping++;
@@ -173,9 +162,9 @@ void preprocess_graph(
 
         std::getline(file, line);
         if(is_verylarge)
-            sscanf(line.c_str(), "%lld %lld", &v_src, &v_dest);
+            sscanf(line.c_str(), "%llu %llu", &v_src, &v_dest);
         else
-            sscanf(line.c_str(), "%d %d", &v_src, &v_dest);
+            sscanf(line.c_str(), "%u %u", &v_src, &v_dest);
         mapped_src = mapping[v_src];
         mapped_dest = mapping[v_dest];
 
@@ -390,7 +379,7 @@ void preprocess_graph(
 
 int main(int argc, char **argv){
 
-    if(argc<3){
+    if(argc < 3){
 
         std::cout
                 << "Required argument:\n"
@@ -399,7 +388,7 @@ int main(int argc, char **argv){
                 << "\t--undirected : add reverse edges\n"
                 << "\t--virtual : build vCSR (virtual CSR) specifying maximum degree (<= 1024) for each vertex (e.g., --virtual 32)\n"
                 << "\t--sorted : sort intra-neighbor lists\n"
-                << "\t--verylarge : set data type of vertices and edges to 'long long' to handle very large input graph (e.g., com-Friendster and twitter7), default='int'\n"
+                << "\t--verylarge : set data type of vertices and edges to 'unsigned long long' to handle very large input graph (e.g., com-Friendster), default='unsigned int'\n"
                 << std::endl;
 
         exit(-1);
@@ -517,10 +506,10 @@ int main(int argc, char **argv){
         std::cout << "[Valid] Unsorted intra-neighbor lists" << std::endl;
 
     if(is_verylarge)
-        std::cout << "[Valid] Data type='long long'" << std::endl;
+        std::cout << "[Valid] Data type='unsigned long long'" << std::endl;
 
     else
-        std::cout << "[Valid] Data type='int'" << std::endl;
+        std::cout << "[Valid] Data type='unsigned int'" << std::endl;
 
 
     if(cnt_err > 0){
@@ -530,7 +519,7 @@ int main(int argc, char **argv){
 
     if(is_verylarge){
 
-        preprocess_graph<long long>(
+        preprocess_graph<unsigned long long>(
 
                 filename,
                 is_undirected,
@@ -538,11 +527,12 @@ int main(int argc, char **argv){
                 is_sorted,
                 is_verylarge,
                 t_elpd_st,
-                max_degree
+                max_degree,
+                ULLONG_MAX
         );
     }
     else
-        preprocess_graph<int>(
+        preprocess_graph<unsigned int>(
 
                 filename,
                 is_undirected,
@@ -550,7 +540,8 @@ int main(int argc, char **argv){
                 is_sorted,
                 is_verylarge,
                 t_elpd_st,
-                max_degree
+                max_degree,
+                UINT_MAX
         );
 
     return 0;
