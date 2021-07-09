@@ -3,127 +3,29 @@
 #include <cstring>
 #include <fstream>
 #include <cstdio>
+#include <climits>
 #include "wtime.h"
 
-typedef long long data_t;
+template <typename data_t>
+void preprocess_graph(
 
-int main(int argc, char **argv){
-
-    if(argc<3){
-
-        std::cout
-                << "Required argument:\n"
-                << "\t--input : input graph data in mtx format (e.g., --input com-Orkut.mtx)\n"
-                << "Optional arguments:\n"
-                << "\t--undirected : add reverse edges\n"
-                << "\t--virtual : build vCSR (virtual CSR) specifying maximum degree (<= 1024) for each vertex (e.g., --virtual 32)\n"
-                << std::endl;
-
-        exit(-1);
-    }
+        std::string filename,
+        bool is_undirected,
+        bool is_virtual,
+        bool is_sorted,
+        bool is_verylarge,
+        double t_elpd_st,
+        int max_degree
+){
 
     std::ifstream file;
-    std::string filename;
-    bool is_undirected = false;
-    bool is_virtual = false;
-    int max_degree;
-
-    bool err_arg_invalid_input = false;
-    bool err_arg_invalid_max_degree = false;
-
-    bool is_checked_input = false;
-    bool is_checked_undirected = false;
-    bool is_checked_virtual = false;
+    double t_st;
 
     bool fin_beg_pos = false;
     bool fin_adj_list = false;
     bool fin_vid_pos = false;
     bool fin_vid_list = false;
     bool fin_virt_beg_pos = false;
-
-    data_t disk_beg_pos;
-    data_t disk_adj_list;
-    data_t disk_vid_pos;
-    data_t disk_vid_list;
-    data_t disk_virt_beg_pos;
-    data_t disk_acc = 0;
-
-    double t_st, t_elpd_st;
-
-    t_elpd_st = wtime();
-    for(int i = 1; i < argc; i++){
-
-        if(!strcmp(argv[i], "--input") && i != argc - 1){
-
-            if(!is_checked_input){
-
-                if(!strcmp(argv[i + 1] + (strlen(argv[i + 1]) - 4), ".mtx")){
-
-                    err_arg_invalid_input = false;
-                    filename = std::string(argv[i + 1]);
-                }
-                else
-                    err_arg_invalid_input = true;
-
-                is_checked_input = true;
-            }
-        }
-
-        else if(!strcmp(argv[i], "--undirected")){
-
-            if(!is_checked_undirected){
-
-                is_undirected = true;
-                is_checked_undirected = true;
-            }
-        }
-
-        else if(!strcmp(argv[i], "--virtual") && i != argc - 1){
-
-            if(!is_checked_virtual){
-
-                max_degree = atoi(argv[i + 1]);
-
-                if(max_degree > 0 && max_degree <= 1024)
-                    err_arg_invalid_max_degree = false;
-                else
-                    err_arg_invalid_max_degree = true;
-
-                is_virtual = true;
-                is_checked_virtual = true;
-            }
-        }
-    }
-
-    int cnt_err = 0;
-
-    if(err_arg_invalid_input){
-        std::cout << "[Invalid] Must use mtx format (Matrix Market)." << std::endl;
-        cnt_err++;
-    }
-    else
-        std::cout << "[Valid] Input file: " << filename << std::endl;
-
-    if(is_undirected)
-        std::cout << "[Valid] Undirected (reverse edges)" << std::endl;
-    else
-        std::cout << "[Valid] Directed" << std::endl;
-
-    if(is_virtual){
-        if(err_arg_invalid_max_degree){
-            std::cout << "[Invalid] Maximum degree must be an integer k, where 0 < k <= 1024." << std::endl;
-            cnt_err++;
-        }
-        else
-            std::cout << "[Valid] vCSR with maximum degree " << max_degree << std::endl;
-    }
-    else
-        std::cout << "[Valid] Conventional CSR" << std::endl;
-
-    if(cnt_err > 0){
-        std::cout << "\nPlease make sure that arguments are valid." << std::endl;
-        exit(-1);
-    }
 
     file.open(filename.c_str(), std::ios::in);
     if(!file.is_open()){
@@ -141,16 +43,23 @@ int main(int argc, char **argv){
             break;
     }
 
-    data_t ll_nodes_x, ll_nodes_y, ll_edges;
-    int item_scanned = sscanf(line.c_str(), "%lld %lld %lld", &ll_nodes_x, &ll_nodes_y, &ll_edges);
-    if(item_scanned < 3 || ll_nodes_x <= 0 || ll_nodes_y <= 0 || ll_edges <= 0){
+    data_t disk_beg_pos, disk_adj_list, disk_vid_pos, disk_vid_list, disk_virt_beg_pos;
+    data_t disk_acc = 0;
+
+    data_t nodes_x, nodes_y, edges;
+    int item_scanned;
+    if(is_verylarge)
+        item_scanned = sscanf(line.c_str(), "%lld %lld %lld", &nodes_x, &nodes_y, &edges);
+    else
+        item_scanned = sscanf(line.c_str(), "%d %d %d", &nodes_x, &nodes_y, &edges);
+    if(item_scanned < 3 || nodes_x <= 0 || nodes_y <= 0 || edges <= 0){
         std::cout << "[Invalid] Graph metadata is not valid." << std::endl;
         std::cout << "\nPlease make sure that the first line after all comments represents nodes_x, node_y, and edges." << std::endl;
         exit(-1);
     }
 
-    data_t vert_count = ll_nodes_x;
-    data_t edge_count = ll_edges;
+    data_t vert_count = nodes_x;
+    data_t edge_count = edges;
     std::cout << "[Info] NUM_VERTICES = " << vert_count << std::endl;
     std::cout << "[Info] NUM_EDGES = " << edge_count;
     if(is_undirected){
@@ -158,6 +67,18 @@ int main(int argc, char **argv){
         std::cout << " -> " << edge_count << " (doubling edges)";
     }
     std::cout << std::endl;
+
+    if(is_verylarge){
+        if(vert_count < INT_MAX && edge_count < INT_MAX)
+            std::cout << "[Notification] The graph size is not very large, so disabling --verylarge is appropriate." << std::endl;
+    }
+    else{
+        if(vert_count >= INT_MAX || edge_count >= INT_MAX){
+            std::cout << "[Invalid] The graph size is very large, so you must enable --verylarge." << std::endl;
+            file.close();
+            exit(-1);
+        }
+    }
 
     data_t *degree = (data_t *) malloc(sizeof(data_t) * vert_count);
 
@@ -175,7 +96,10 @@ int main(int argc, char **argv){
     for(data_t i = 0; i < num_loop; i++){
 
         std::getline(file, line);
-        item_scanned = sscanf(line.c_str(), "%lld %lld", &v_src, &v_dest);
+        if(is_verylarge)
+            item_scanned = sscanf(line.c_str(), "%lld %lld", &v_src, &v_dest);
+        else
+            item_scanned = sscanf(line.c_str(), "%d %d", &v_src, &v_dest);
 
         if(item_scanned < 2){
             std::cout << "[Invalid] An invalid edge that has neither v_src or v_dest was found." << std::endl;
@@ -202,7 +126,10 @@ int main(int argc, char **argv){
     for(data_t i = 0; i < num_loop; i++){
 
         std::getline(file, line);
-        sscanf(line.c_str(), "%lld %lld", &v_src, &v_dest);
+        if(is_verylarge)
+            sscanf(line.c_str(), "%lld %lld", &v_src, &v_dest);
+        else
+            sscanf(line.c_str(), "%d %d", &v_src, &v_dest);
 
         if(mapping[v_src] == -1){
 
@@ -245,7 +172,10 @@ int main(int argc, char **argv){
     for(data_t i = 0; i < num_loop; i++){
 
         std::getline(file, line);
-        sscanf(line.c_str(), "%lld %lld", &v_src, &v_dest);
+        if(is_verylarge)
+            sscanf(line.c_str(), "%lld %lld", &v_src, &v_dest);
+        else
+            sscanf(line.c_str(), "%d %d", &v_src, &v_dest);
         mapped_src = mapping[v_src];
         mapped_dest = mapping[v_dest];
 
@@ -266,21 +196,24 @@ int main(int argc, char **argv){
     free(mapping);
     file.close();
 
-    t_st = wtime();
-    std::cout << "[Progress] Sorting intra-neighbor lists . . . ";
-    data_t k, temp;
-    for(data_t i = 0; i < vert_count; i++){
-        for(data_t j = beg_pos[i]; j < beg_pos[i + 1] - 1; j++){
-            k = j;
-            while(k >= beg_pos[i] && adj_list[k] > adj_list[k + 1]){
-                temp = adj_list[k];
-                adj_list[k] = adj_list[k + 1];
-                adj_list[k + 1] = temp;
-                k--;
+    if(is_sorted){
+
+        t_st = wtime();
+        std::cout << "[Progress] Sorting intra-neighbor lists . . . ";
+        data_t k, temp;
+        for(data_t i = 0; i < vert_count; i++){
+            for(data_t j = beg_pos[i]; j < beg_pos[i + 1] - 1; j++){
+                k = j;
+                while(k >= beg_pos[i] && adj_list[k] > adj_list[k + 1]){
+                    temp = adj_list[k];
+                    adj_list[k] = adj_list[k + 1];
+                    adj_list[k + 1] = temp;
+                    k--;
+                }
             }
         }
+        std::cout << "[Done] " << "(elapsed (s): " << wtime() - t_st << ")" << std::endl;
     }
-    std::cout << "[Done] " << "(elapsed (s): " << wtime() - t_st << ")" << std::endl;
 
     data_t cnt_spawned = 0;
     data_t virt_vert_count;
@@ -430,6 +363,8 @@ int main(int argc, char **argv){
         fin_virt_beg_pos = true;
     }
 
+    free(degree);
+
     std::cout << "===============================================================" << std::endl;
     std::cout << "[Result] Successfully completed! " << std::endl;
     if(is_virtual)
@@ -451,8 +386,172 @@ int main(int argc, char **argv){
     if(fin_virt_beg_pos)
         std::cout << "[Created] " << filename << "_virt_beg_pos.bin" << " (" << disk_virt_beg_pos << " bytes)" << std::endl;
     std::cout << "===============================================================" << std::endl;
+}
 
-    free(degree);
+int main(int argc, char **argv){
+
+    if(argc<3){
+
+        std::cout
+                << "Required argument:\n"
+                << "\t--input : input graph data in mtx format (e.g., --input com-Orkut.mtx)\n"
+                << "Optional arguments:\n"
+                << "\t--undirected : add reverse edges\n"
+                << "\t--virtual : build vCSR (virtual CSR) specifying maximum degree (<= 1024) for each vertex (e.g., --virtual 32)\n"
+                << "\t--sorted : sort intra-neighbor lists\n"
+                << "\t--verylarge : set data type of vertices and edges to 'long long' to handle very large input graph (e.g., com-Friendster and twitter7), default='int'\n"
+                << std::endl;
+
+        exit(-1);
+    }
+
+    std::string filename;
+    bool is_undirected = false;
+    bool is_virtual = false;
+    bool is_sorted = false;
+    bool is_verylarge = false;
+    int max_degree;
+
+    bool err_arg_invalid_input = false;
+    bool err_arg_invalid_max_degree = false;
+
+    bool is_checked_input = false;
+    bool is_checked_undirected = false;
+    bool is_checked_virtual = false;
+    bool is_checked_sorted = false;
+    bool is_checked_verylarge = false;
+
+    double t_elpd_st;
+
+    t_elpd_st = wtime();
+    for(int i = 1; i < argc; i++){
+
+        if(!strcmp(argv[i], "--input") && i != argc - 1){
+
+            if(!is_checked_input){
+
+                if(!strcmp(argv[i + 1] + (strlen(argv[i + 1]) - 4), ".mtx")){
+
+                    err_arg_invalid_input = false;
+                    filename = std::string(argv[i + 1]);
+                }
+                else
+                    err_arg_invalid_input = true;
+
+                is_checked_input = true;
+            }
+        }
+
+        else if(!strcmp(argv[i], "--undirected")){
+
+            if(!is_checked_undirected){
+
+                is_undirected = true;
+                is_checked_undirected = true;
+            }
+        }
+
+        else if(!strcmp(argv[i], "--virtual") && i != argc - 1){
+
+            if(!is_checked_virtual){
+
+                max_degree = atoi(argv[i + 1]);
+
+                if(max_degree > 0 && max_degree <= 1024)
+                    err_arg_invalid_max_degree = false;
+                else
+                    err_arg_invalid_max_degree = true;
+
+                is_virtual = true;
+                is_checked_virtual = true;
+            }
+        }
+
+        else if(!strcmp(argv[i], "--sorted")){
+
+            if(!is_checked_sorted){
+
+                is_sorted = true;
+                is_checked_sorted = true;
+            }
+        }
+
+        else if(!strcmp(argv[i], "--verylarge")){
+
+            if(!is_checked_verylarge){
+
+                is_verylarge = true;
+                is_checked_verylarge = true;
+            }
+        }
+    }
+
+    int cnt_err = 0;
+
+    if(err_arg_invalid_input){
+        std::cout << "[Invalid] Must use mtx format (Matrix Market)." << std::endl;
+        cnt_err++;
+    }
+    else
+        std::cout << "[Valid] Input file: " << filename << std::endl;
+
+    if(is_undirected)
+        std::cout << "[Valid] Undirected (reverse edges)" << std::endl;
+    else
+        std::cout << "[Valid] Directed" << std::endl;
+
+    if(is_virtual){
+        if(err_arg_invalid_max_degree){
+            std::cout << "[Invalid] Maximum degree must be an integer k, where 0 < k <= 1024." << std::endl;
+            cnt_err++;
+        }
+        else
+            std::cout << "[Valid] vCSR with maximum degree " << max_degree << std::endl;
+    }
+    else
+        std::cout << "[Valid] Conventional CSR" << std::endl;
+
+    if(is_sorted)
+        std::cout << "[Valid] Sorted intra-neighbor lists" << std::endl;
+    else
+        std::cout << "[Valid] Unsorted intra-neighbor lists" << std::endl;
+
+    if(is_verylarge)
+        std::cout << "[Valid] Data type='long long'" << std::endl;
+
+    else
+        std::cout << "[Valid] Data type='int'" << std::endl;
+
+
+    if(cnt_err > 0){
+        std::cout << "\nPlease make sure that arguments are valid." << std::endl;
+        exit(-1);
+    }
+
+    if(is_verylarge){
+
+        preprocess_graph<long long>(
+
+                filename,
+                is_undirected,
+                is_virtual,
+                is_sorted,
+                is_verylarge,
+                t_elpd_st,
+                max_degree
+        );
+    }
+    else
+        preprocess_graph<int>(
+
+                filename,
+                is_undirected,
+                is_virtual,
+                is_sorted,
+                is_verylarge,
+                t_elpd_st,
+                max_degree
+        );
 
     return 0;
 }

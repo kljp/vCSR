@@ -26,11 +26,15 @@ make
 ---
 Execute
 -----
-./vcsr --input \<\*_mtx\> \[option1\] \[option2\]
+./vcsr --input \<\*_mtx\> \[option1\] \[option2\] \[option3\] \[option4\]
 - \[option1\]: --virtual \<max\_degree\> 
     - set maximum degree of a vertex to \<max\_degree\>
 - \[option2\]: --undirected
     - add reverse edges
+- \[option3\]: --sorted
+    - sort intra-neighbor lists
+- \[option4\]: --verylarge
+    - set data type of vertices and edges to 'long long', default='int'
 
 ---
 Code specification
