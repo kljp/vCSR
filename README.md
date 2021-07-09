@@ -26,7 +26,7 @@ make
 ---
 Execute
 -----
-./vcsr --input \<\*_mtx\> \[option1\] \[option2\] \[option3\] \[option4\]
+./vcsr --input \<\*.mtx\> \[option1\] \[option2\] \[option3\] \[option4\]
 - \[option1\]: --virtual \<max\_degree\> 
     - set maximum degree of a vertex to \<max\_degree\>
 - \[option2\]: --undirected
@@ -42,6 +42,7 @@ Code specification
 __vCSR implementation:__
 - vcsr.cpp: generate CSR
     - Graph source: https://sparse.tamu.edu/
+    - Please make sure that the format of input graph should be Matrix Market.
 
 __Header Provided by https://github.com/iHeartGraph/Enterprise/:__
 - wtime.h: get current time for measuring the consumed time
