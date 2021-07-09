@@ -16,7 +16,7 @@ g++ 7.5.0
 ---
 Tested hardware
 -----
-GTX970
+Intel(R) Xeon(R) CPU E3-1231 v3 @ 3.40GHz
 
 ---
 Compile
